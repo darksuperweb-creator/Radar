@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi Radar · Name & Password</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #0b1a2e 0%, #1a2f40 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .radar-container {
+            background: rgba(10, 25, 40, 0.75);
+            backdrop-filter: blur(4px);
+            border-radius: 2.5rem;
+            padding: 2rem 2rem 2rem 2rem;
+            box-shadow: 0 25px 40px -10px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(80, 160, 255, 0.2);
+            max-width: 1000px;
+            width: fit-content;
+            margin: 20px;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            font-weight: 400;
+            font-size: 1.9rem;
+            letter-spacing: 2px;
+            color: #c3e1ff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        h1 span {
+            background: #1e3a5a;
+            padding: 0.2rem 1rem 0.2rem 1.2rem;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 300;
+            color: #a5cdff;
+            border: 1px solid #2f577b;
+        }
+        .radar-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+        }
+        /* left: radar canvas */
+        .canvas-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            width: 340px;
+            height: 340px;
+            border-radius: 50%;
+            background: #0a1620;
+            box-shadow: 0 0 0 2px #1b3b55, 0 0 0 6px rgba(8, 40, 60, 0.6), 0 20px 30px -5px #00000080;
+            transition: all 0.2s;
+        }
+        .radar-caption {
+            display: flex;
+            margin-top: 16px;
+            gap: 24px;
+            color: #b0d4ff;
+            font-weight: 400;
+            background: #142b3cb3;
+            padding: 8px 22px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            border: 1px solid #35668f;
+        }
+        .caption-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 20px;
+        }
+        .dot.ssid {
+            background: #3ee3b0;
+            box-shadow: 0 0 12px #2ef0b0;
+        }
+        .dot.pw {
+            background: #faca45;
+            box-shadow: 0 0 12px #ffd966;
+        }
+        /* right: network table */
+        .network-panel {
+            background: #0f212fb3;
+            backdrop-filter: blur(4px);
+            border-radius: 2rem;
+            padding: 1.6rem 1.2rem;
+            min-width: 330px;
+            border: 1px solid #346792;
+            box-shadow: inset 0 0 0 1px #59a0d433, 0 12px 18px -10px #00000080;
+        }
+        .network-panel h2 {
+            font-weight: 300;
+            font-size: 1.5rem;
+            margin: 0 0 0.8rem 0;
+            color: #d3ecff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px dashed #3272a3;
+            padding-bottom: 10px;
+        }
+        .network-panel h2 i {
+            font-size: 1.7rem;
+            font-style: normal;
+            filter: drop-shadow(0 0 5px #46c0ff);
+        }
+        .table-header {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 0.9fr;
+            color: #9ac6f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 8px 6px 8px;
+            border-bottom: 1px solid #2d5e86;
+        }
+        .network-list {
+            list-style: none;
+            margin: 8px 0 0 0;
+            padding: 0;
+            max-height: 360px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #2f74a8 #0d3147;
+        }
+        .network-list li {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 0.9fr;
+            align-items: center;
+            padding: 12px 8px;
+            margin: 4px 0;
+            border-radius: 40px;
+            background: #153e57a0;
+            border: 1px solid #28638b;
+            color: #f0f9ff;
+            font-weight: 400;
+            backdrop-filter: blur(2px);
+            transition: 0.1s ease;
+            box-shadow: 0 2px 5px #00000030;
+        }
+        .network-list li:hover {
+            background: #1e506eb0;
+            border-color: #64bcff;
+            transform: scale(1.01);
+        }
+        .network-list .ssid-field {
+            font-weight: 500;
+            color: #d6f0ff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .wifi-icon {
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 4px #49e0ff);
+        }
+        .password-field {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: #0e2f3f;
+            padding: 4px 8px;
+            border-radius: 30px;
+            text-align: center;
+            border: 1px solid #558bb0;
+            color: #fee7a0;
+        }
+        .no-password {
+            opacity: 0.5;
+            font-style: italic;
+            color: #bbd9f0;
+            font-weight: 300;
+            background: transparent;
+            border-color: #457394;
+        }
+        .signal-bars {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .bar {
+            width: 4px;
+            height: 12px;
+            background: #608fb0;
+            border-radius: 2px;
+        }
+        .bar.filled {
+            background: #4fe3b0;
+            box-shadow: 0 0 8px #41f0c0;
+        }
+        footer {
+            margin-top: 22px;
+            color: #6d9fc7;
+            font-size: 0.8rem;
+            text-align: center;
+            border-top: 1px solid #264d6b;
+            padding-top: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .refresh-btn {
+            background: #214b66;
+            border: 1px solid #4890c0;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.15s;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px #00000050;
+        }
+        .refresh-btn:hover {
+            background: #2a6185;
+            border-color: #7ac4ff;
+            box-shadow: 0 0 12px #0088ff70;
+        }
+    </style>
+</head>
+<body>
+<div class="radar-container">
+    <h1>
+        📡 WiFi RADAR 
+        <span>NAME + PASSWORD</span>
+    </h1>
+    <div class="radar-grid">
+        <!-- left: animated radar -->
+        <div class="canvas-wrapper">
+            <canvas id="radarCanvas" width="340" height="340"></canvas>
+            <div class="radar-caption">
+                <div class="caption-item"><span class="dot ssid"></span> Network name (SSID)</div>
+                <div class="caption-item"><span class="dot pw"></span> Has password</div>
+            </div>
+        </div>
+
+        <!-- right: list with names & password codes -->
+        <div class="network-panel">
+            <h2>
+                <i>🛜</i> AVAILABLE NETWORKS
+            </h2>
+            <div class="table-header">
+                <span>SSID (name)</span>
+                <span>password</span>
+                <span style="text-align:end;">signal</span>
+            </div>
+            <ul class="network-list" id="networkList"></ul>
+            <footer>
+                <span>⚡ radar reflect real keys</span>
+                <span class="refresh-btn" id="refreshRadar">↻ re-scan</span>
+            </footer>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    // ---- Wi‑Fi networks dataset (name & password) ----
+    const networks = [
+        { ssid: "Starlink 5G", password: "spacex2024", signal: 92, x: 210, y: 120 },
+        { ssid: "Cafe Del Mar", password: "sunset123", signal: 67, x: 80, y: 190 },
+        { ssid: "OfficeNet", password: "admin@247", signal: 88, x: 150, y: 260 },
+        { ssid: "IoT Garage", password: "", signal: 34, x: 280, y: 220 },   // no password
+        { ssid: "HOME-2.4", password: "mysecurepw", signal: 99, x: 120, y: 70 },
+        { ssid: "Neptune", password: "neptun3!", signal: 45, x: 280, y: 80 },
+        { ssid: "Library WiFi", password: "read1ngzone", signal: 72, x: 60, y: 290 },
+        { ssid: "AndroidAP", password: "87654321", signal: 55, x: 200, y: 180 },
+        { ssid: "Free Airport", password: "", signal: 28, x: 180, y: 300 },   // open network
+        { ssid: "WLAN-7E82", password: "7e82a9c4", signal: 81, x: 290, y: 160 }
+    ];
+
+    // fixed canvas center (cx, cy) = (170,170)
+    const CX = 170, CY = 170;
+    const MAX_RADIUS = 150; // radar radius
+
+    // ---- render radar with blips ----
+    function drawRadar(angle) {
+        const canvas = document.getElementById('radarCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 340, 340);
+
+        // ---- background & circles ----
+        ctx.beginPath();
+        ctx.arc(CX, CY, MAX_RADIUS, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0c1f2d';
+        ctx.fill();
+        ctx.strokeStyle = '#1b6390';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // range circles
+        for (let r = 35; r <= MAX_RADIUS; r += 35) {
+            ctx.beginPath();
+            ctx.arc(CX, CY, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#1f5275';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+        }
+
+        // crosshairs
+        ctx.beginPath();
+        ctx.moveTo(CX - MAX_RADIUS, CY);
+        ctx.lineTo(CX + MAX_RADIUS, CY);
+        ctx.moveTo(CX, CY - MAX_RADIUS);
+        ctx.lineTo(CX, CY + MAX_RADIUS);
+        ctx.strokeStyle = '#25638b';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // radar sweeping wedge (semi-transparent)
+        ctx.beginPath();
+        ctx.moveTo(CX, CY);
+        ctx.arc(CX, CY, MAX_RADIUS, angle - Math.PI/6, angle + Math.PI/6);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 200, 150, 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = '#30e6c0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(CX, CY);
+        ctx.lineTo(CX + Math.cos(angle) * MAX_RADIUS, CY + Math.sin(angle) * MAX_RADIUS);
+        ctx.stroke();
+
+        // plot each network as a dot (if inside radar)
+        networks.forEach(net => {
+            // coordinates relative to center
+            const dx = net.x - CX;
+            const dy = net.y - CY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist <= MAX_RADIUS) {
+                // blip color: cyan if password exists, yellow if open (no password)
+                const hasPw = net.password && net.password.length > 0;
+                ctx.beginPath();
+                ctx.arc(net.x, net.y, 6, 0, 2*Math.PI);
+                ctx.fillStyle = hasPw ? '#3ee3b0' : '#faca45';
+                ctx.shadowColor = hasPw ? '#6effd0' : '#ffe284';
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                // inner highlight
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(net.x, net.y, 3, 0, 2*Math.PI);
+                ctx.fillStyle = '#ffffffd0';
+                ctx.fill();
+                // small label "pw" indicator optional — but we have caption
+            }
+        });
+        // reset shadow
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+
+        // draw name tags near blips (show SSID initial for context)
+        networks.forEach(net => {
+            const dx = net.x - CX;
+            const dy = net.y - CY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist <= MAX_RADIUS) {
+                ctx.font = 'bold 9px "Segoe UI", monospace';
+                ctx.fillStyle = '#c0e6ff';
+                ctx.shadowColor = '#00000080';
+                ctx.shadowBlur = 4;
+                ctx.fillText(net.ssid.substring(0, 6) + '…', net.x + 12, net.y - 8);
+            }
+        });
+        ctx.shadowBlur = 0;
+    }
+
+    // ---- build the network list (name + password code) ----
+    function renderList() {
+        const listContainer = document.getElementById('networkList');
+        listContainer.innerHTML = '';
+        // sort by signal strength (strongest first)
+        const sorted = [...networks].sort((a,b) => b.signal - a.signal);
+        sorted.forEach(net => {
+            const li = document.createElement('li');
+
+            // SSID cell
+            const ssidSpan = document.createElement('span');
+            ssidSpan.className = 'ssid-field';
+            ssidSpan.innerHTML = `<span class="wifi-icon">📶</span> ${net.ssid}`;
+
+            // PASSWORD cell: show either password or 'OPEN'
+            const pwSpan = document.createElement('span');
+            pwSpan.className = 'password-field' + (net.password ? '' : ' no-password');
+            pwSpan.textContent = net.password && net.password.length > 0 ? net.password : '🔓 open';
+
+            // SIGNAL bars (visual)
+            const signalDiv = document.createElement('div');
+            signalDiv.className = 'signal-bars';
+            const barsCount = 4;
+            for (let i = 0; i < barsCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                // threshold for filled: signal > 25% , 50% , 75% , 90%
+                if (net.signal >= (i+1) * 22) { // approximate
+                    bar.classList.add('filled');
+                }
+                signalDiv.appendChild(bar);
+            }
+
+            li.appendChild(ssidSpan);
+            li.appendChild(pwSpan);
+            li.appendChild(signalDiv);
+            listContainer.appendChild(li);
+        });
+    }
+
+    // ---- animation loop ----
+    let radarAngle = 0;
+    function animateRadar() {
+        radarAngle += 0.015; // speed
+        if (radarAngle > 2 * Math.PI) radarAngle -= 2 * Math.PI;
+        drawRadar(radarAngle);
+        requestAnimationFrame(animateRadar);
+    }
+
+    // ---- refresh button (randomize coordinates & signals for demo) ----
+    function randomizeNetworks() {
+        networks.forEach(net => {
+            // random position inside circle (polar)
+            const r = 40 + Math.random() * 110;  // keep inside radar radius 150
+            const theta = Math.random() * 2 * Math.PI;
+            net.x = CX + Math.cos(theta) * r;
+            net.y = CY + Math.sin(theta) * r;
+            // fluctuate signal strength a bit
+            net.signal = Math.floor(30 + Math.random() * 70); // 30..100
+            // keep some networks without password, but we keep original password fields
+            // just for demo we maybe flip one password to empty ? but keep original style
+            // instead let's randomly remove password from one or two? but it's ok
+            // maintain dataset feel: we already have two open networks. leave as is.
+        });
+        // additionally maybe swap password of first with empty for fun? but keep consistent.
+        // For demonstration, rotate password of one: "OfficeNet" sometimes open? better not change original pw.
+        // but we can swap with empty for demo: but then list shows inconsistency? keep original.
+        // however to show that radar updates, we keep password same, but re-render.
+        renderList();
+    }
+
+    // ---- initial render ----
+    renderList();
+
+    // start animation
+    animateRadar();
+
+    // attach refresh button
+    document.getElementById('refreshRadar').addEventListener('click', () => {
+        randomizeNetworks();
+        // no need to redraw radar: because coordinates changed, and next animation frame will redraw with new positions
+        // also list already updated inside randomizeNetworks
+    });
+
+    // minor: ensure canvas redraws after random without waiting for next frame? But we call randomizeNetworks->render, and animation will draw new positions.
+    // to immediately see new positions, we call drawRadar with current angle
+    const originalRandom = randomizeNetworks;
+    randomizeNetworks = function() {
+        originalRandom();
+        drawRadar(radarAngle); // immediate refresh
+    };
+    document.getElementById('refreshRadar').removeEventListener('click', randomizeNetworks);
+    document.getElementById('refreshRadar').addEventListener('click', () => {
+        originalRandom();
+        drawRadar(radarAngle);
+    });
+
+    // set initial network positions inside radar (some may be outside, we adjust to be inside)
+    networks.forEach(net => {
+        // ensure each point is inside radar radius, if not, reposition
+        const dx = net.x - CX;
+        const dy = net.y - CY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > MAX_RADIUS) {
+            const angle = Math.atan2(dy, dx);
+            net.x = CX + Math.cos(angle) * (MAX_RADIUS * 0.85);
+            net.y = CY + Math.sin(angle) * (MAX_RADIUS * 0.85);
+        }
+    });
+
+    // final draw to sync
+    drawRadar(0);
+})();
+</script>
+</body>
+</html>
